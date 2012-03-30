@@ -1,0 +1,60 @@
+This project contains a Java program that works around the slow split issue
+identified in [ACCUMULO-348][1].  The program works around the issue by making
+the split calls in parallel.  To use this project use maven to build the jar 
+using the following command.
+
+  mvn package
+
+Then place the jar in <ACCUMULO_HOME>/lib/ext and then run the following command.
+
+   $ ./bin/accumulo ParallelSplitter
+   Usage : ParallelSplitter <instance> <zoo keepers> <table> <user> <pass> <num threads> <file>
+
+Some experiments were done varying the number of splits to create and the
+number of threads to use.  These results were done on a 10 node cluster using
+Accumulo 1.4.0.  The table being split was empty, if it had data that would
+probably change the times.  The times were obtained by timing the process, so
+the times include java startup times.  The results are below.
+
+ParallelSplitter times for 999 splits :
+
+  4 threads :  5.4s
+  8 threads :  3.0s
+ 16 threads :  3.7s
+
+This is the time the addsplits command took for 999 splits
+
+  $ time ./bin/accumulo shell -u root -p secret -e "addsplits -t foo -sf splits.txt"
+   real   0m13.386s
+
+ParallelSplitter times for 4999 splits :
+
+  4 threads :  53.6s
+  8 threads :  15.0s
+ 16 threads :   7.4s
+ 32 threads :  20.2s
+
+This is the time the addsplits command took for 4999 splits
+
+  $ time ./bin/accumulo shell -u root -p secret -e "addsplits -t foo -sf splits.txt"
+   real   1m37.254s
+
+ParallelSplitter times for 99,999 splits :
+
+   8 threads : 408.3s
+  16 threads : 227.1s
+  32 threads : 117.7s
+  64 threads :  92.3s
+ 128 threads : 119.5s
+
+This is the time the addsplits command took for 99,999 splits
+  
+  $ time ./bin/accumulo shell -u root -p secret -e "addsplits -t foo -sf splits.txt"
+   real   152m15.531s
+
+About halfway though the above command I discovered that flushing the metadata
+table would speed things up.  Doing this more frequently would have
+dramatically changed the time above.
+
+[1]: https://issues.apache.org/jira/browse/ACCUMULO-348
+
